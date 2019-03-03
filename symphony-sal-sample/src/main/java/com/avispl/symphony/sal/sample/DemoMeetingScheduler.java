@@ -45,6 +45,7 @@ public class DemoMeetingScheduler {
 
     private UUID accountId;
     private UUID userId;
+    private String userEmail;
     private String meetingOwner;
     private String meetingRequester;
     private Long meetingStart;
@@ -68,9 +69,9 @@ public class DemoMeetingScheduler {
             // as we have updated meeting start value, now we have to use the updated one when we want to retrieve meeting or its single occurrence
             handleDemoMeetingOccurrences(meetingId, scheduledMeeting.getStart());
 
-            handleRooms(accountId, userId);
+            handleRooms(accountId, userEmail);
 
-            handleCustomRooms(userId);
+            handleCustomRooms(userEmail);
 
             fetchMeetingsForRooms(accountId, meetingStart, meetingEnd);
 
@@ -112,7 +113,7 @@ public class DemoMeetingScheduler {
         retrieveMeetingOccurrence(meetingId, recurrentMeetingStart, RECURRENT_INSTANCE_ID);
     }
 
-    public void handleRooms(UUID accountId, UUID userId) {
+    public void handleRooms(UUID accountId, String userEmail) {
         try {
             List<UUID> roomIds = fetchRoomIds(accountId);
             if (roomIds.isEmpty()) {
@@ -121,26 +122,26 @@ public class DemoMeetingScheduler {
 
             final UUID roomId = roomIds.get(RandomUtils.nextInt(roomIds.size())); // choose any fetched room
 
-            addFavoriteRoom(userId, roomId);
+            addFavoriteRoom(userEmail, roomId);
 
-            fetchFavoriteRooms(userId);
+            fetchFavoriteRooms(userEmail);
 
-            removeFavoriteRoom(userId, roomId);
+            removeFavoriteRoom(userEmail, roomId);
 
-            fetchRecentRooms(userId);
+            fetchRecentRooms(userEmail);
         } catch (Exception e) {
             logger.warn("Failed to handle rooms for account {} and user {}", accountId, userId, e);
         }
     }
 
-    public void handleCustomRooms(UUID userId) {
-        addFavoriteCustomRoom(userId);
+    public void handleCustomRooms(String userEmail) {
+        addFavoriteCustomRoom(userEmail);
     }
 
-    public void addFavoriteCustomRoom(UUID userId) {
-        logger.info("Adding favorite custom room for user {}", userId);
+    public void addFavoriteCustomRoom(String userEmail) {
+        logger.info("Adding favorite custom room for user {}", userEmail);
         FavoriteCustomRoomRequest request = new FavoriteCustomRoomRequest();
-        request.setUserId(userId);
+        request.setUserEmail(userEmail);
         CustomRoomDetails customRoom = new CustomRoomDetails();
         customRoom.setAddress(CUSTOM_ROOM_ADDRESS);
         customRoom.setName(CUSTOM_ROOM_NAME);
@@ -152,34 +153,34 @@ public class DemoMeetingScheduler {
             customRoomId = schedulingService.addFavoriteCustomRoom(request);
             logger.info("Custom room has been added with id {}", customRoomId);
         } catch (Exception e) {
-            logger.warn("Failed to add favorite custom room for user {}", userId, e);
+            logger.warn("Failed to add favorite custom room for user {}", userEmail, e);
         }
     }
 
-    public void fetchRecentRooms(UUID userId) {
-        logger.info("Fetching recent rooms for user {}", userId);
+    public void fetchRecentRooms(String userEmail) {
+        logger.info("Fetching recent rooms for user {}", userEmail);
         try {
-            RoomListResponse response = schedulingService.listRecentRooms(userId);
-            logger.info("Found recent rooms {} for user {}", response, userId);
+            RoomListResponse response = schedulingService.listRecentRooms(userEmail);
+            logger.info("Found recent rooms {} for user {}", response, userEmail);
         } catch (Exception e) {
-            logger.warn("Failed to fetch recent rooms for user {}", userId, e);
+            logger.warn("Failed to fetch recent rooms for user {}", userEmail, e);
         }
     }
 
-    public void fetchFavoriteRooms(UUID userId) {
-        logger.info("Fetching favorite rooms for user {}", userId);
+    public void fetchFavoriteRooms(String userEmail) {
+        logger.info("Fetching favorite rooms for user {}", userEmail);
         try {
-            RoomListResponse response = schedulingService.listFavoriteRooms(userId);
-            logger.info("Found favorite rooms {} for user {}", response, userId);
+            RoomListResponse response = schedulingService.listFavoriteRooms(userEmail);
+            logger.info("Found favorite rooms {} for user {}", response, userEmail);
         } catch (Exception e) {
-            logger.warn("Failed to fetch favorite rooms for account {}", userId, e);
+            logger.warn("Failed to fetch favorite rooms for account {}", userEmail, e);
         }
     }
 
-    public void removeFavoriteRoom(UUID accountId, UUID roomId) {
+    public void removeFavoriteRoom(String userEmail, UUID roomId) {
         logger.info("Removing favorite room {} for account {}", roomId, accountId);
         FavoriteRoomRequest request = new FavoriteRoomRequest();
-        request.setUserId(accountId);
+        request.setUserEmail(userEmail);
         request.setRoomId(roomId);
         try {
             schedulingService.removeFavoriteRoom(request);
@@ -225,16 +226,16 @@ public class DemoMeetingScheduler {
         return Collections.emptySet();
     }
 
-    public void addFavoriteRoom(UUID userId, UUID roomId) {
-        logger.info("Adding favorite room for account {} and room id {}", userId, roomId);
+    public void addFavoriteRoom(String userEmail, UUID roomId) {
+        logger.info("Adding favorite room for account {} and room id {}", userEmail, roomId);
         FavoriteRoomRequest request = new FavoriteRoomRequest();
-        request.setUserId(userId);
+        request.setUserEmail(userEmail);
         request.setRoomId(roomId);
         try {
             schedulingService.addFavoriteRoom(request);
             logger.info("Favorite room has been added");
         } catch (Exception e) {
-            logger.warn("Failed to add favorite room for account {} and room {}", userId, roomId, e);
+            logger.warn("Failed to add favorite room for account {} and room {}", userEmail, roomId, e);
         }
     }
 
