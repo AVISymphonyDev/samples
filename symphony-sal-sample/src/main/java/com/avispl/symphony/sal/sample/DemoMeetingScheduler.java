@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019 AVI-SPL Inc. All Rights Reserved.
+ */
+
 package com.avispl.symphony.sal.sample;
 
 import java.util.Collections;
@@ -7,10 +11,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.avispl.symphony.api.common.error.*;
 import org.apache.commons.lang.math.RandomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import com.avispl.symphony.api.sal.SchedulingService;
 import com.avispl.symphony.api.sal.dto.CancellationRequest;
@@ -26,7 +30,9 @@ import com.avispl.symphony.api.sal.dto.RoomListResponse;
 import com.avispl.symphony.api.sal.dto.RoomScheduledMeeting;
 
 /**
- * Schedules a demo meeting
+ * Demonstrates SAL API usage
+ *
+ * @author Symphony Dev Team<br> Created on Dec 8, 2018
  */
 public class DemoMeetingScheduler {
 
@@ -43,6 +49,9 @@ public class DemoMeetingScheduler {
     private static final String CUSTOM_ROOM_ADDRESS = "127.0.0.1";
     private static final String CUSTOM_ROOM_PROTOCOL = "H323";
 
+    /**
+     * Following properties need to be defined by an adapter implementor
+     */
     private UUID accountId;
     private UUID userId;
     private String userEmail;
@@ -52,196 +61,73 @@ public class DemoMeetingScheduler {
     private Long meetingEnd;
     private Set<EmailParticipant> participants;
 
-    @Autowired
+    /**
+     * Reference to a {@link SchedulingService}
+     * Important: in order to obtain this reference, adapter should:
+     * <ul>
+     *     <li>Contain a property defined as {@code private SchedulingService schedulingService;}</li>
+     *     <li>Getter method for a {@code schedulingService}, see {@link #getSchedulingService()}</li>
+     *     <li>Setter method for a {@code schedulingService}, see {@link #setSchedulingService(SchedulingService)}</li>
+     * </ul>
+     */
     private SchedulingService schedulingService;
 
+    public void setSchedulingService(SchedulingService schedulingService) {
+        this.schedulingService = schedulingService;
+    }
+
+    public SchedulingService getSchedulingService() {
+        return this.schedulingService;
+    }
+
     /**
-     * Schedules, retrieves and cancels a demo meeting
+     * Demonstrates using different API calls
      */
     public void scheduleAndCancelDemoMeeting() {
-        try {
-            final Long meetingId = scheduleDemoMeeting();
 
-            Meeting scheduledMeeting = retrieveDemoMeeting(meetingId);
+        // create meeting and obtain its ID
+        final Long meetingId = scheduleDemoMeeting();
 
-            scheduledMeeting = updateMeetingStartAndEnd(scheduledMeeting);
+        // check whether meeting was successfully created
+        if (meetingId == null)
+            throw new RuntimeException("Meeting creation has failed");
 
-            // as we have updated meeting start value, now we have to use the updated one when we want to retrieve meeting or its single occurrence
-            handleDemoMeetingOccurrences(meetingId, scheduledMeeting.getStart());
+        // retrieve created meeting
+        Meeting scheduledMeeting = retrieveDemoMeeting(meetingId);
 
-            handleRooms(accountId, userEmail);
+        if (scheduledMeeting == null)
+            throw new RuntimeException("Meeting with meetingId=" + meetingId + " was not found");
 
-            handleCustomRooms(userEmail);
+        // update start/end time of the meeting
+        scheduledMeeting = updateMeetingStartAndEnd(scheduledMeeting);
 
-            fetchMeetingsForRooms(accountId, meetingStart, meetingEnd);
+        // as we have updated meeting start value, now we have to use the
+        // updated one when we want to retrieve meeting or its single occurrence
+        handleDemoMeetingOccurrences(meetingId, scheduledMeeting.getStart());
 
-            fetchMeetingsForRequester(accountId, meetingRequester, meetingStart, meetingEnd);
+        // add/remove favorite rooms
+        handleRooms(accountId, userEmail);
 
-            cancelDemoMeeting(meetingId);
-        } catch (Exception e) {
-            logger.warn("Failed to schedule SAL demo meeting", e);
-        }
-    }
+        // add/remove custom rooms
+        handleCustomRooms(userEmail);
 
-    public void fetchMeetingsForRooms(UUID accountId, Long startDate, Long endDate) {
-        List<UUID> roomIds = fetchRoomIds(accountId);
-        UUID[] roomIdsArray = roomIds.toArray(new UUID[roomIds.size()]);
-        try {
-            Map<UUID, Set<RoomScheduledMeeting>> roomToMeetingsMap =
-                    schedulingService.listMeetingRoomSchedules(roomIdsArray, startDate, endDate);
-            logger.info("Found scheduled meetings for rooms {}", roomToMeetingsMap);
-        } catch (Exception e) {
-            logger.warn("Failed to fetch meeting scheduled for rooms {}", roomIds, e);
-        }
+        // retrieve meetings for given rooms
+        fetchMeetingsForRooms(accountId, meetingStart, meetingEnd);
+
+        // retrieve meetings for a given meeting requestor
+        fetchMeetingsForRequester(accountId, meetingRequester, meetingStart, meetingEnd);
+
+        // cancels created meeting
+        cancelDemoMeeting(meetingId);
     }
 
     /**
-     * Handles recurrent meeting occurrences.
-     * Note that it's possible only if we schedule recurrent ({@link #RECURRENCE}) meeting
+     * Demonstrates meeting scheduling example
      */
-    public void handleDemoMeetingOccurrences(Long meetingId, Long meetingStart) {
-        retrieveMeetingOccurrence(meetingId, meetingStart, RECURRENT_INSTANCE_ID);
-
-        Long recurrentMeetingStart = meetingStart;
-
-        Meeting meetingOccurrence = retrieveMeetingOccurrence(meetingId, recurrentMeetingStart, RECURRENT_INSTANCE_ID);
-
-        updateMeetingOccurrence(recurrentMeetingStart, meetingOccurrence);
-
-        cancelMeetingOccurrence(meetingId, recurrentMeetingStart, RECURRENT_INSTANCE_ID);
-
-        retrieveMeetingOccurrence(meetingId, recurrentMeetingStart, RECURRENT_INSTANCE_ID);
-    }
-
-    public void handleRooms(UUID accountId, String userEmail) {
-        try {
-            List<UUID> roomIds = fetchRoomIds(accountId);
-            if (roomIds.isEmpty()) {
-                throw new RuntimeException("No rooms found");
-            }
-
-            final UUID roomId = roomIds.get(RandomUtils.nextInt(roomIds.size())); // choose any fetched room
-
-            addFavoriteRoom(userEmail, roomId);
-
-            fetchFavoriteRooms(userEmail);
-
-            removeFavoriteRoom(userEmail, roomId);
-
-            fetchRecentRooms(userEmail);
-        } catch (Exception e) {
-            logger.warn("Failed to handle rooms for account {} and user {}", accountId, userId, e);
-        }
-    }
-
-    public void handleCustomRooms(String userEmail) {
-        addFavoriteCustomRoom(userEmail);
-    }
-
-    public void addFavoriteCustomRoom(String userEmail) {
-        logger.info("Adding favorite custom room for user {}", userEmail);
-        FavoriteCustomRoomRequest request = new FavoriteCustomRoomRequest();
-        request.setUserEmail(userEmail);
-        CustomRoomDetails customRoom = new CustomRoomDetails();
-        customRoom.setAddress(CUSTOM_ROOM_ADDRESS);
-        customRoom.setName(CUSTOM_ROOM_NAME);
-        customRoom.setProtocol(CUSTOM_ROOM_PROTOCOL);
-        request.setDetails(customRoom);
-        Long customRoomId;
-        try {
-            // as a response we expect numeric identifier of the persisted custom room (i.e. 42)
-            customRoomId = schedulingService.addFavoriteCustomRoom(request);
-            logger.info("Custom room has been added with id {}", customRoomId);
-        } catch (Exception e) {
-            logger.warn("Failed to add favorite custom room for user {}", userEmail, e);
-        }
-    }
-
-    public void fetchRecentRooms(String userEmail) {
-        logger.info("Fetching recent rooms for user {}", userEmail);
-        try {
-            RoomListResponse response = schedulingService.listRecentRooms(userEmail);
-            logger.info("Found recent rooms {} for user {}", response, userEmail);
-        } catch (Exception e) {
-            logger.warn("Failed to fetch recent rooms for user {}", userEmail, e);
-        }
-    }
-
-    public void fetchFavoriteRooms(String userEmail) {
-        logger.info("Fetching favorite rooms for user {}", userEmail);
-        try {
-            RoomListResponse response = schedulingService.listFavoriteRooms(userEmail);
-            logger.info("Found favorite rooms {} for user {}", response, userEmail);
-        } catch (Exception e) {
-            logger.warn("Failed to fetch favorite rooms for account {}", userEmail, e);
-        }
-    }
-
-    public void removeFavoriteRoom(String userEmail, UUID roomId) {
-        logger.info("Removing favorite room {} for account {}", roomId, accountId);
-        FavoriteRoomRequest request = new FavoriteRoomRequest();
-        request.setUserEmail(userEmail);
-        request.setRoomId(roomId);
-        try {
-            schedulingService.removeFavoriteRoom(request);
-        } catch (Exception e) {
-            logger.warn("Failed to remove favorite room {} for account {}", roomId, accountId, e);
-        }
-    }
-
-    public List<UUID> fetchRoomIds(UUID accountId) {
-        Set<Location> locations = fetchLocations(accountId);
-        UUID locationId = locations.stream()
-                .map(Location::getId)
-                .findAny()
-                .orElseThrow(() -> new IllegalStateException("No locations found"));
-
-        Set<RoomDetails> rooms = fetchRooms(accountId, locationId);
-        return rooms.stream()
-                .map(RoomDetails::getRoomId)
-                .collect(Collectors.toList());
-    }
-
-    public Set<RoomDetails> fetchRooms(UUID accountId, UUID locationId) {
-        logger.info("Fetching rooms by account {} and location {}", accountId, locationId);
-        try {
-            Set<RoomDetails> rooms = schedulingService.listRooms(accountId, locationId);
-            logger.info("Found rooms {}", rooms);
-            return rooms;
-        } catch (Exception e) {
-            logger.warn("Failed to fetch rooms by account {} and location {}", accountId, locationId, e);
-        }
-        return Collections.emptySet();
-    }
-
-    public Set<Location> fetchLocations(UUID userAccountId) {
-        logger.info("Fetching locations by user id {}", userAccountId);
-        try {
-            Set<Location> locations = schedulingService.listLocations(userAccountId);
-            logger.info("Found locations {}", locations);
-            return locations;
-        } catch (Exception e) {
-            logger.warn("Failed to fetch locations by user id {}", userAccountId, e);
-        }
-        return Collections.emptySet();
-    }
-
-    public void addFavoriteRoom(String userEmail, UUID roomId) {
-        logger.info("Adding favorite room for account {} and room id {}", userEmail, roomId);
-        FavoriteRoomRequest request = new FavoriteRoomRequest();
-        request.setUserEmail(userEmail);
-        request.setRoomId(roomId);
-        try {
-            schedulingService.addFavoriteRoom(request);
-            logger.info("Favorite room has been added");
-        } catch (Exception e) {
-            logger.warn("Failed to add favorite room for account {} and room {}", userEmail, roomId, e);
-        }
-    }
-
-    public Long scheduleDemoMeeting() throws Exception {
+    public Long scheduleDemoMeeting() {
         logger.info("Creating SAL demo meeting");
 
+        // construction of meeting object
         Meeting meeting = new Meeting();
         meeting.setAccountId(accountId);
         meeting.setEmailParticipants(participants);
@@ -254,7 +140,7 @@ public class DemoMeetingScheduler {
         meeting.setJoinByPhone(false);
         meeting.setJoinByWeb(false);
         meeting.setRecorded(false);
-        meeting.setVip(true);
+        meeting.setVip(false);
         meeting.setSendEmailNotification(true);
         meeting.setRecurrence(RECURRENCE);
         meeting.setRecurrentInstanceId(RECURRENT_INSTANCE_ID);
@@ -267,89 +153,441 @@ public class DemoMeetingScheduler {
         meeting.setTimeZone(MEETING_TIMEZONE);
         meeting.setMeetingSetup(MEETING_SETUP);
 
-        Long meetingId = schedulingService.createMeeting(meeting);
-        logger.info("SAL demo meeting has been created with id: {}", meetingId);
-        return meetingId;
+        try {
+            // meeting provision via SAL API
+            Long meetingId = schedulingService.createMeeting(meeting);
+            logger.info("SAL demo meeting has been created with id: {}", meetingId);
+
+            return meetingId;
+        } catch (InvalidArgumentException e) {
+            handleInvalidArgumentException(e);
+        } catch (ReferenceNotFoundException e) {
+            handleReferenceNotFoundException(e);
+        } catch (ResourceConflictException e) {
+            handleResourceConflictException(e);
+        } catch (Exception e) {
+            logger.info("Meeting request failed. Error: " + e.getMessage());
+        }
+
+        return null;
     }
 
+    /**
+     * Demonstrates how to find meeting instances within given time frame and for specific meeting room identifiers
+     * @param accountId account identifier to look meetings for
+     * @param startDate start time of the time frame to search meeting instances
+     * @param endDate end time of the time frame to search meeting instances
+     */
+    public void fetchMeetingsForRooms(UUID accountId, Long startDate, Long endDate) {
+        // find identifiers of rooms available for an account
+        List<UUID> roomIds = fetchRoomIds(accountId);
+
+        // transform List to array
+        UUID[] roomIdsArray = roomIds.toArray(new UUID[roomIds.size()]);
+
+        try {
+            // perform API call to retrieve meeting instances within given
+            // time frame and for specific meeting room identifiers
+            Map<UUID, Set<RoomScheduledMeeting>> roomToMeetingsMap =
+                    schedulingService.listMeetingRoomSchedules(roomIdsArray, startDate, endDate);
+
+            logger.info("Found scheduled meetings for rooms {}", roomToMeetingsMap);
+        } catch (InvalidArgumentException e) {
+            handleInvalidArgumentException(e);
+        } catch (Exception e) {
+            logger.warn("Failed to fetch meeting scheduled for rooms {}", roomIds, e);
+        }
+    }
+
+    /**
+     * Demonstrates various operations with recurrent meetings
+     * @param meetingId meeting identifier to operate on
+     * @param recurrentMeetingStart timestamp of a time instant that recurrent meeting should start on
+     */
+    public void handleDemoMeetingOccurrences(Long meetingId, Long recurrentMeetingStart) {
+        // fetching meeting occurrence
+        Meeting meetingOccurrence = retrieveMeetingOccurrence(meetingId, recurrentMeetingStart, RECURRENT_INSTANCE_ID);
+
+        // update meeting occurrence
+        updateMeetingOccurrence(recurrentMeetingStart, meetingOccurrence);
+
+        // cancel meeting occurrence
+        cancelMeetingOccurrence(meetingId, recurrentMeetingStart, RECURRENT_INSTANCE_ID);
+
+        // retrieve meeting occurrence after a change
+        retrieveMeetingOccurrence(meetingId, recurrentMeetingStart, RECURRENT_INSTANCE_ID);
+    }
+
+    /**
+     * Demonstrates using room management operations via SAL API
+     * @param accountId
+     * @param userEmail
+     */
+    public void handleRooms(UUID accountId, String userEmail) {
+        // fetching locations available for given account ID
+        List<UUID> roomIds = fetchRoomIds(accountId);
+        if (roomIds.isEmpty()) {
+            throw new RuntimeException("No rooms found");
+        }
+
+        // choose random meeting room room
+        UUID roomId = roomIds.get(RandomUtils.nextInt(roomIds.size()));
+
+        // adding a favourite room
+        addFavoriteRoom(userEmail, roomId);
+
+        // fetch list of favourite rooms available for an user
+        fetchFavoriteRooms(userEmail);
+
+        // remove user's favourite room
+        removeFavoriteRoom(userEmail, roomId);
+
+        // fetch rooms recently used by an user
+        fetchRecentRooms(userEmail);
+    }
+
+    /**
+     * Demonstrates favourite custom rooms handling examples
+     * @param userEmail user email used for a user identification for whom favourite custom rooms to be handled
+     */
+    public void handleCustomRooms(String userEmail) {
+        // add user's favourite custom room
+        addFavoriteCustomRoom(userEmail);
+    }
+
+    /**
+     * Demonstrates adding user's favourite custom room
+     * @param userEmail  user email used for a user identification for whom favourite custom room needs to be added
+     * @return favourite custom room ID
+     */
+    public Long addFavoriteCustomRoom(String userEmail) {
+        logger.info("Adding favorite custom room for user {}", userEmail);
+
+        // constructing objects for an API call
+        CustomRoomDetails customRoom = new CustomRoomDetails();
+        customRoom.setAddress(CUSTOM_ROOM_ADDRESS);
+        customRoom.setName(CUSTOM_ROOM_NAME);
+        customRoom.setProtocol(CUSTOM_ROOM_PROTOCOL);
+        FavoriteCustomRoomRequest request = new FavoriteCustomRoomRequest();
+        request.setUserEmail(userEmail);
+        request.setDetails(customRoom);
+
+        Long customRoomId = null;
+        try {
+            // SAL API call to add favorite custom room
+            customRoomId = schedulingService.addFavoriteCustomRoom(request);
+            logger.info("Favorite custom room has been added with id {} for user {}", customRoomId, userEmail);
+        } catch (ReferenceNotFoundException e) {
+            handleReferenceNotFoundException(e);
+        } catch (InvalidArgumentException e) {
+            handleInvalidArgumentException(e);
+        } catch (Exception e) {
+            logger.warn("Failed to add favorite custom room for user {}", userEmail, e);
+        }
+
+        return customRoomId;
+    }
+
+    /**
+     * Demonstrates fetching rooms recently used by an user
+     * @param userEmail user email used for a user identification for whom recent rooms need to be fetched
+     */
+    public void fetchRecentRooms(String userEmail) {
+        logger.info("Fetching recent rooms for user {}", userEmail);
+        try {
+            // SAL API call to get rooms recently used by an user
+            RoomListResponse response = schedulingService.listRecentRooms(userEmail);
+            logger.info("Found recently used rooms {} for user {}", response, userEmail);
+        } catch (ReferenceNotFoundException e) {
+            handleReferenceNotFoundException(e);
+        } catch (InvalidArgumentException e) {
+            handleInvalidArgumentException(e);
+        } catch (Exception e) {
+            logger.warn("Failed to fetch recent rooms for user {}", userEmail, e);
+        }
+    }
+
+    /**
+     * Demonstrates fetching user favourite rooms
+     * @param userEmail user email used for a user identification for whom favourite rooms needs to be returned
+     */
+    public void fetchFavoriteRooms(String userEmail) {
+        logger.info("Fetching favorite rooms for an user {}", userEmail);
+
+        RoomListResponse response = null;
+        try {
+            // SAL API call to get favourite rooms
+            response = schedulingService.listFavoriteRooms(userEmail);
+            logger.info("Found favorite rooms {} for user {}", response, userEmail);
+        } catch (ReferenceNotFoundException e) {
+            handleReferenceNotFoundException(e);
+        } catch (InvalidArgumentException e) {
+            handleInvalidArgumentException(e);
+        } catch (Exception e) {
+            logger.warn("Failed to fetch favorite rooms for account {}", userEmail, e);
+        }
+    }
+
+    /**
+     * Demonstrates removing favourite room from user's favoourite room list
+     * @param userEmail user email used for a user identification for whom favourite rooms needs to be removed
+     * @param roomId room identifier to remove
+     */
+    public void removeFavoriteRoom(String userEmail, UUID roomId) {
+        logger.info("Removing favorite room {} for account {}", roomId, accountId);
+
+        // constructing an object for an API call
+        FavoriteRoomRequest request = new FavoriteRoomRequest();
+        request.setUserEmail(userEmail);
+        request.setRoomId(roomId);
+
+        try {
+            // SAL API call to remove favorite room
+            schedulingService.removeFavoriteRoom(request);
+        } catch (TargetNotFoundException e) {
+            handleTargetNotFoundException(e);
+        } catch (ReferenceNotFoundException e) {
+            handleReferenceNotFoundException(e);
+        } catch (InvalidArgumentException e) {
+            handleInvalidArgumentException(e);
+        } catch (Exception e) {
+            logger.warn("Failed to remove favorite room {} for account {}", roomId, accountId, e);
+        }
+    }
+
+    /**
+     * Demonstrates looking up meeting rooms for a given account
+     * @param accountId account ID to search meeting rooms at
+     * @return {@link List} identifiers of rooms available for an account
+     */
+    public List<UUID> fetchRoomIds(UUID accountId) {
+        // fetching locations available for given account ID
+        Set<Location> locations = fetchLocations(accountId);
+
+        // picking random location ID
+        UUID locationId = locations.stream()
+                .map(Location::getId)
+                .findAny()
+                .orElseThrow(() -> new IllegalStateException("No locations available for account " + accountId));
+
+        // fetching rooms available for the given account and location IDs
+        Set<RoomDetails> rooms = fetchRooms(accountId, locationId);
+
+        // return Set of available meeting room identifiers
+        return rooms.stream()
+                .map(RoomDetails::getRoomId)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Demonstrates fetching rooms available for the given account and location IDs
+     * @param accountId account ID to search meeting rooms at
+     * @param locationId location ID to search meeting rooms at
+     * @return
+     */
+    public Set<RoomDetails> fetchRooms(UUID accountId, UUID locationId) {
+        logger.info("Fetching rooms by account {} and location {}", accountId, locationId);
+        try {
+            Set<RoomDetails> rooms = schedulingService.listRooms(accountId, locationId);
+            logger.info("Found rooms {}", rooms);
+            return rooms;
+        } catch (Exception e) {
+            logger.warn("Failed to fetch rooms by account {} and location {}", accountId, locationId, e);
+        }
+        return Collections.emptySet();
+    }
+
+    /**
+     * Demonstrates looking up locations by given account ID
+     * @param accountId account ID to search locations for
+     * @return {@link Set} of locations available for the given account
+     */
+    public Set<Location> fetchLocations(UUID accountId) {
+        logger.info("Fetching locations for an account ID {}", accountId);
+
+        try {
+            Set<Location> locations = schedulingService.listLocations(accountId);
+            logger.info("Found locations {} for account ID {}", locations, accountId);
+            return locations;
+        } catch (InvalidArgumentException e) {
+            handleInvalidArgumentException(e);
+        } catch (Exception e) {
+            logger.warn("Failed to fetch locations by an account ID {}", accountId, e);
+        }
+
+        return Collections.emptySet();
+    }
+
+    /**
+     * Demonstrates adding room to a user favorite list
+     * @param userEmail user email used for a user identification for whom favourite room needs to be added
+     * @param roomId room ID to add to a user favorite list
+     */
+    public void addFavoriteRoom(String userEmail, UUID roomId) {
+        logger.info("Adding favorite room for user e-mail {} and room ID {}", userEmail, roomId);
+
+        // constructing an object for an API call
+        FavoriteRoomRequest favouriteRoomRequest = new FavoriteRoomRequest();
+        favouriteRoomRequest.setUserEmail(userEmail);
+        favouriteRoomRequest.setRoomId(roomId);
+
+        try {
+            // perform API call to add favourite room for an user
+            schedulingService.addFavoriteRoom(favouriteRoomRequest);
+            logger.info("Favorite room {} has successfully been added", favouriteRoomRequest);
+        } catch (ReferenceNotFoundException e) {
+            handleReferenceNotFoundException(e);
+        } catch (TargetNotFoundException e) {
+            handleTargetNotFoundException(e);
+        } catch (InvalidArgumentException e) {
+            handleInvalidArgumentException(e);
+        } catch (Exception e) {
+            logger.warn("Failed to add favorite room for user e-mail {} and room ID {}", userEmail, roomId, e);
+        }
+    }
+
+    /**
+     * Demonstrates {@link Meeting} retrieval by a given meeting ID
+     * @param meetingId meeting ID to search
+     * @return {@link Meeting} instance or null if not found
+     */
     public Meeting retrieveDemoMeeting(Long meetingId) {
         logger.info("Retrieving meeting of id {}", meetingId);
+
         Meeting scheduledMeeting = null;
         try {
+            // SAL API call to fetch a meeting instance
             scheduledMeeting = schedulingService.retrieveMeeting(meetingId);
-
             logger.info("Found meeting {}", scheduledMeeting);
+        } catch (TargetNotFoundException e) {
+            handleTargetNotFoundException(e);
         } catch (Exception e) {
             logger.warn("Failed to retrieve meeting of id {}", meetingId, e);
         }
+
         return scheduledMeeting;
     }
 
+    /**
+     * Demonstrates fetching user meetings within a date range
+     * @param accountId account ID to search meetings
+     * @param meetingRequester meeting requestor e-mail
+     * @param startDate start time of the time frame to search meeting instances
+     * @param endDate end time of the time frame to search meeting instances
+     */
     public void fetchMeetingsForRequester(UUID accountId, String meetingRequester, Long startDate, Long endDate) {
-        logger.info("Retrieving meetings requested by {}", meetingRequester);
+        logger.info("Retrieving meeting instances requested by {}", meetingRequester);
         try {
+            // SAL API call to fetch user meetings within a date range
             Set<Meeting> meetings = schedulingService.listMeetingsByUsers(accountId, startDate, endDate, meetingRequester);
-            logger.info("Found meetings {} requested by {}", meetings, meetingRequester);
+            logger.info("Found meeting instances {} requested by {}", meetings, meetingRequester);
+        } catch (InvalidArgumentException e) {
+            handleInvalidArgumentException(e);
         } catch (Exception e) {
             logger.warn("Failed to retrieve meetings requested by {}", meetingRequester, e);
         }
     }
 
+    /**
+     * Demonstrates meeting update
+     * @param meeting {@link Meeting} instance to update
+     * @return updated {@link Meeting} instance
+     */
     public Meeting updateMeetingStartAndEnd(Meeting meeting) {
         if (meeting == null) {
-            logger.warn("Skipped updating nullable meeting");
             return null;
         }
 
-        logger.info("Updating SAL meeting start and end values");
+        logger.info("Updating meeting {} start and end values", meeting);
+
+        // applying changes to Meeting object
         long shift = 1000L;
+        meeting.setStart(meeting.getStart() + shift);
+        meeting.setEnd(meeting.getEnd() + shift);
+
         try {
-            meeting.setStart(meeting.getStart() + shift);
-            meeting.setEnd(meeting.getEnd() + shift);
+            // SAL API call to update a meeting instance
             schedulingService.updateMeeting(meeting);
+        } catch (TargetNotFoundException e) {
+            handleTargetNotFoundException(e);
+        } catch (InvalidArgumentException e) {
+            handleInvalidArgumentException(e);
+        } catch (ResourceConflictException e) {
+            handleResourceConflictException(e);
         } catch (Exception e) {
             logger.warn("Failed to update scheduled SAL meeting of id {}", meeting.getMeetingId(), e);
         }
+
         return meeting;
     }
 
     /**
-     * Here we retrieve single occurrence of the scheduled demo meeting, note that it's possible only because our meeting is recurrent {@link #RECURRENCE}
+     * Demonstrates retrieval of single occurrence of the scheduled demo meeting.
+     * This will work only if specified meeting is a recurrent one
      *
-     * @param recurrentMeetingId     meeting id
-     * @param recurrentInstanceStart
-     * @param recurrentInstanceId
+     * @param recurrentMeetingId recurrent meeting ID
+     * @param recurrentInstanceStart start time of recurrent instance
+     * @param recurrentInstanceId recurrent instance id (optional, needs to be provided if retrieved instance is a recurrence exception)
      */
     public Meeting retrieveMeetingOccurrence(Long recurrentMeetingId, Long recurrentInstanceStart, String recurrentInstanceId) {
         Meeting scheduledRecurrentMeetingOccurrence = null;
         try {
+            // SAL API call to retrieve a meeting occurrence
             scheduledRecurrentMeetingOccurrence =
                     schedulingService.retrieveMeetingOccurrence(recurrentMeetingId, recurrentInstanceStart, recurrentInstanceId);
 
             logger.info("Found single occurrence of a recurrent meeting {}", scheduledRecurrentMeetingOccurrence);
+        } catch (TargetNotFoundException e) {
+            handleTargetNotFoundException(e);
+        } catch (InvalidArgumentException e) {
+            handleInvalidArgumentException(e);
         } catch (Exception e) {
             logger.warn("Failed to retrieve meeting occurrence where meeting id {}", recurrentMeetingId, e);
         }
         return scheduledRecurrentMeetingOccurrence;
     }
 
+    /**
+     * Demonstrates updating single occurrence of a recurrent meeting
+     * @param recurrentInstanceStart start time of recurrent instance
+     * @param meeting reccurrent meeting instance to update
+     */
     public void updateMeetingOccurrence(Long recurrentInstanceStart, Meeting meeting) {
         final Long recurrentMeetingId = meeting.getMeetingId();
         logger.info("Updating single occurrence of recurrent SAL demo meeting {}", recurrentMeetingId);
         try {
+            // SAL API call to update an occurrence
             schedulingService.updateMeetingOccurrence(recurrentInstanceStart, meeting);
             logger.info("Single occurrence of SAL demo meeting {} has been updated", recurrentMeetingId);
+        } catch (ReferenceNotFoundException e) {
+            handleReferenceNotFoundException(e);
+        } catch (TargetNotFoundException e) {
+            handleTargetNotFoundException(e);
+        } catch (InvalidArgumentException e) {
+            handleInvalidArgumentException(e);
+        } catch (ResourceConflictException e) {
+            handleResourceConflictException(e);
         } catch (Exception e) {
             logger.warn("Failed to update meeting occurrence where recurrent instance start {} and meeting id {}",
                     recurrentInstanceStart, recurrentMeetingId, e);
         }
     }
 
+    /**
+     * Demonstrates cancellation a single occurrence of a recurrent meeting
+     * @param recurrentMeetingId identifier of a parent meeting which defines recurrent series
+     * @param recurrentInstanceStart start time of recurrent instance
+     * @param recurrentInstanceId recurrent instance id
+     */
     public void cancelMeetingOccurrence(Long recurrentMeetingId, Long recurrentInstanceStart, String recurrentInstanceId) {
         logger.info("Cancelling single occurrence of recurrent SAL demo meeting {}", recurrentMeetingId);
+
+        // construct object for an API call
+        MeetingOccurrenceCancellationRequest request =
+                new MeetingOccurrenceCancellationRequest(recurrentMeetingId, recurrentInstanceStart, recurrentInstanceId, true);
+
         try {
-            MeetingOccurrenceCancellationRequest request =
-                    new MeetingOccurrenceCancellationRequest(recurrentMeetingId, recurrentInstanceStart, recurrentInstanceId, true);
+            // SAL API call to cancel an occurrence
             schedulingService.cancelMeetingOccurrence(request);
             logger.info("Single occurrence of SAL demo meeting {} has been canceled", recurrentMeetingId);
         } catch (Exception e) {
@@ -357,74 +595,116 @@ public class DemoMeetingScheduler {
         }
     }
 
+    /**
+     * Demonstrates meeting cancellation by given meeting ID
+     * @param meetingId meeting ID
+     */
     public void cancelDemoMeeting(Long meetingId) {
         logger.info("Cancelling SAL demo meeting of id {}", meetingId);
 
+        // construct object for an API call
         CancellationRequest cancellationRequest = new CancellationRequest();
         cancellationRequest.setMeetingId(meetingId);
         cancellationRequest.setNotifyAttendees(true);
-        try {
-            schedulingService.cancelMeeting(cancellationRequest);
 
+        try {
+            // SAL API call to cancel a meeting
+            schedulingService.cancelMeeting(cancellationRequest);
             logger.info("SAL demo meeting of id {} has been canceled", meetingId);
+        } catch (InvalidArgumentException e) {
+            handleInvalidArgumentException(e);
+        } catch (TargetNotFoundException e) {
+            handleTargetNotFoundException(e);
         } catch (Exception e) {
             logger.warn("Failed to cancel SAL demo meeting of id {}", meetingId, e);
         }
     }
 
-    public UUID getAccountId() {
-        return accountId;
+    /**
+     * Demonstrates example of handling {@link ResourceConflictException} exception thrown by a SAL API.
+     * See more details about {@link ResourceConflictException} in its javadoc.
+     * @param e {@link ResourceConflictException} instance
+     */
+    private void handleResourceConflictException(ResourceConflictException e) {
+        ConflictingEntity conflictingEntityType = getConflictingEntityType(e);
+        logger.info("Meeting can't be provisioned because of the conflicting resource(s). "
+                        + "Conflicting entity type: {}."
+                        + "Conflicting entities: {}",
+                conflictingEntityType,
+                conflictingEntityType != null ? e.getErrorContext().get(conflictingEntityType.key()) : null);
     }
 
-    public void setAccountId(UUID accountId) {
-        this.accountId = accountId;
+    /**
+     * Demonstrates example of handling {@link ReferenceNotFoundException} exception thrown by a SAL API.
+     * See more details about {@link ReferenceNotFoundException} in its javadoc.
+     * @param e {@link ReferenceNotFoundException} instance
+     */
+    private void handleReferenceNotFoundException(ReferenceNotFoundException e) {
+        InvalidEntity invalidEntityType = getInvalidEntityType(e);
+        logger.info("One of the entities referenced in request wasn't found. "
+                        + "Entity type not found: {}."
+                        + "Object not found: {}",
+                invalidEntityType,
+                invalidEntityType != null ? e.getErrorContext().get(invalidEntityType.key()) : null);
     }
 
-    public String getMeetingOwner() {
-        return meetingOwner;
+    /**
+     * Demonstrates example of handling {@link TargetNotFoundException} exception thrown by a SAL API.
+     * See more details about {@link TargetNotFoundException} in its javadoc.
+     * @param e {@link ReferenceNotFoundException} instance
+     */
+    private void handleTargetNotFoundException(TargetNotFoundException e) {
+        InvalidEntity invalidEntityType = getInvalidEntityType(e);
+        logger.info("Target entity referenced in request wasn't found. "
+                        + "Entity type not found: {}."
+                        + "Object not found: {}",
+                invalidEntityType,
+                invalidEntityType != null ? e.getErrorContext().get(invalidEntityType.key()) : null);
     }
 
-    public void setMeetingOwner(String meetingOwner) {
-        this.meetingOwner = meetingOwner;
+    /**
+     * Demonstrates example of handling {@link InvalidArgumentException} exception thrown by a SAL API.
+     * See more details about {@link InvalidArgumentException} in its javadoc.
+     * @param e {@link InvalidArgumentException} instance
+     */
+    private void handleInvalidArgumentException(InvalidArgumentException e) {
+        logger.info("Request failed due to a malformed request. "
+                + "Argument reference: " +  e.getErrorContext().get(InvalidArgumentConstraints.Descriptors.ARGUMENT) + "\n"
+                + "Argument value: " +  e.getErrorContext().get(InvalidArgumentConstraints.Descriptors.ARGUMENT_VALUE) + "\n"
+                + "Constraint: " +  e.getErrorContext().get(InvalidArgumentConstraints.Descriptors.CONSTRAINT));
     }
 
-    public String getMeetingRequester() {
-        return meetingRequester;
+    /**
+     * Checks error context and returns {@link InvalidEntity} instance that's associated with the context.
+     * @param e {@link ContextAwareException} instance
+     * @return {@link InvalidEntity} instance that's associated with the context or null if not found
+     */
+    private InvalidEntity getInvalidEntityType(ContextAwareException e) {
+        return getErroredEntityType(e, InvalidEntity.class);
     }
 
-    public void setMeetingRequester(String meetingRequester) {
-        this.meetingRequester = meetingRequester;
+    /**
+     * Checks error context and returns {@link ConflictingEntity} instance that's associated with the context.
+     * @param e {@link ContextAwareException} instance
+     * @return {@link ConflictingEntity} instance that's associated with the context or null if not found
+     */
+    private ConflictingEntity getConflictingEntityType(ContextAwareException e) {
+        return getErroredEntityType(e, ConflictingEntity.class);
     }
 
-    public Long getMeetingStart() {
-        return meetingStart;
-    }
+    /**
+     * Checks error context and returns enum instance that's associated with the context.
+     * @param e {@link ContextAwareException} instance
+     * @param c Class instance of enum to look into
+     * @return instance of enum constant that's associated with the context or null if not found
+     */
+    private <T extends Enum & ErrorContextEntity> T  getErroredEntityType(ContextAwareException e, Class<T> c) {
+        for (T ie : c.getEnumConstants()) {
+            if (!e.getErrorContext().containsKey(ie.key()))
+                continue;
 
-    public void setMeetingStart(Long meetingStart) {
-        this.meetingStart = meetingStart;
-    }
-
-    public Long getMeetingEnd() {
-        return meetingEnd;
-    }
-
-    public void setMeetingEnd(Long meetingEnd) {
-        this.meetingEnd = meetingEnd;
-    }
-
-    public Set<EmailParticipant> getParticipants() {
-        return participants;
-    }
-
-    public void setParticipants(Set<EmailParticipant> participants) {
-        this.participants = participants;
-    }
-
-    public UUID getUserId() {
-        return userId;
-    }
-
-    public void setUserId(UUID userId) {
-        this.userId = userId;
+            return ie;
+        }
+        return null;
     }
 }

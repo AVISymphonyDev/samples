@@ -17,17 +17,12 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <java.version>1.8</java.version>
-        <symphony-sal.version>4.6.0-SNAPSHOT</symphony-sal.version>
+        <symphony-sal.version>4.7.0</symphony-sal.version>
         <org.slf4j.version>1.7.13</org.slf4j.version>
         <commons-lang.version>2.2</commons-lang.version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>com.avispl.symphony.api</groupId>
-            <artifactId>symphony-api-sal</artifactId>
-            <version>${symphony-sal.version}</version>
-        </dependency>
         <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
@@ -38,32 +33,19 @@
             <artifactId>slf4j-api</artifactId>
             <version>${org.slf4j.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.avispl.symphony.api</groupId>
+            <artifactId>symphony-api-commons</artifactId>
+            <scope>system</scope>
+            <version>${symphony-sal.version}</version>
+            <systemPath>${basedir}\src\lib\symphony-api-commons-${symphony-sal.version}.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>com.avispl.symphony.api</groupId>
+            <artifactId>symphony-api-sal</artifactId>
+            <scope>system</scope>
+            <version>${symphony-sal.version}</version>
+            <systemPath>${basedir}\src\lib\symphony-api-sal-${symphony-sal.version}.jar</systemPath>
+        </dependency>
     </dependencies>
-
-    <repositories>
-        <repository>
-            <id>avi-spl.releases</id>
-            <url>http://172.31.254.15:8080/nexus/content/repositories/releases</url>
-        </repository>
-        <repository>
-            <id>avi-spl.snapshots</id>
-            <url>http://172.31.254.15:8080/nexus/content/repositories/snapshots</url>
-        </repository>
-        <repository>
-            <id>avi-spl.thirdparty</id>
-            <url>http://172.31.254.15:8080/nexus/content/repositories/thirdparty</url>
-        </repository>
-    </repositories>
-
-    <distributionManagement>
-        <repository>
-            <id>avi-spl.releases</id>
-            <url>http://172.31.254.15:8080/nexus/content/repositories/releases/</url>
-        </repository>
-        <snapshotRepository>
-            <id>avi-spl.snapshots</id>
-            <url>http://172.31.254.15:8080/nexus/content/repositories/snapshots/</url>
-        </snapshotRepository>
-    </distributionManagement>
-
 </project>
