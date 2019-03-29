@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019 AVI-SPL Inc. All Rights Reserved.
+ */
+
 package com.avispl.symphony.tal.mocks;
 
 import com.avispl.symphony.api.tal.TalConfigService;
@@ -7,10 +11,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 
 /**
  * Mock implementation of TalConfigService
- * This mock could be used to simplify adapter testing without a need to set up Spring context and other parts of Symphony infrastructure
+ * This mock could be used to simplify adapter testing having parts of Symphony infrastructure
+ *
+ * @author Symphony Dev Team<br> Created on Jan 20, 2019
  */
 public class MockTalConfigService implements TalConfigService {
 
@@ -25,11 +32,18 @@ public class MockTalConfigService implements TalConfigService {
         instanceConfigMapping.put(TicketSourceConfigProperty.PASSWORD, "Df764!dfp");
 
         // keys are Symphony priorities and values are third party mapped statuses
-        Map<String, String> customerPriorityMapping  = new HashMap<>();
-        customerPriorityMapping.put("Critical", "10");
-        customerPriorityMapping.put("Major", "5");
-        customerPriorityMapping.put("Minor", "3");
-        customerPriorityMapping.put("Informational", "1");
+        Map<String, String> customerPriorityMappingForThirdParty  = new HashMap<>();
+        customerPriorityMappingForThirdParty.put("Critical", "10");
+        customerPriorityMappingForThirdParty.put("Major", "5");
+        customerPriorityMappingForThirdParty.put("Minor", "3");
+        customerPriorityMappingForThirdParty.put("Informational", "1");
+
+        // keys are third party priorities and values are Symphony mapped statuses
+        Map<String, String> customerPriorityMappingForSymphony  = new HashMap<>();
+        customerPriorityMappingForThirdParty.put("10", "Critical");
+        customerPriorityMappingForThirdParty.put("5", "Major");
+        customerPriorityMappingForThirdParty.put("3", "Minor");
+        customerPriorityMappingForThirdParty.put("1", "Informational");
 
         // keys are third party users and values are Symphony mapped user
         Map<String, String> userMappingForSymphony = new HashMap<>();
@@ -56,7 +70,8 @@ public class MockTalConfigService implements TalConfigService {
         statusMappingForThirdParty.put("Close", "Closed");
         statusMappingForThirdParty.put("ClosePending", "Resolved");
 
-        config.setPriorityMappingForThirdParty(customerPriorityMapping);
+        config.setPriorityMappingForThirdParty(customerPriorityMappingForThirdParty);
+        config.setPriorityMappingForSymphony(customerPriorityMappingForSymphony);
         config.setUserMappingForSymphony(userMappingForSymphony);
         config.setUserMappingForThirdParty(userMappingForThirdParty);
         config.setTicketSourceConfig(instanceConfigMapping);
@@ -67,12 +82,7 @@ public class MockTalConfigService implements TalConfigService {
     }
 
     @Override
-    public String getCustomerSyncType(UUID uuid, UpdateSource updateSource) throws ExecutionException {
-        return "MockTalAdapter";
-    }
-
-    @Override
-    public void syncAdapterConfig(AdapterConfig adapterConfig) throws ExecutionException {
+    public void subscribeForTicketSystemConfigUpdate(UUID uuid, Consumer<TicketSystemConfig> consumer) {
         // no op
     }
 }

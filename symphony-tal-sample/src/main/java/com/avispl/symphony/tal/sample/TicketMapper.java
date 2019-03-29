@@ -1,10 +1,14 @@
+/*
+ * Copyright (c) 2019 AVI-SPL Inc. All Rights Reserved.
+ */
+
 package com.avispl.symphony.tal.sample;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.springframework.beans.factory.annotation.Autowired;
 
 import com.avispl.symphony.api.tal.TalConfigService;
 import com.avispl.symphony.api.tal.dto.TalTicket;
@@ -12,78 +16,120 @@ import com.avispl.symphony.api.tal.dto.TicketSystemConfig;
 
 /**
  * Performs mapping of TAL ticket into third-party one and vice-versa
+ *
+ * @author Symphony Dev Team<br> Created on Dec 7, 2018
+ * @since 4.6
  */
 public class TicketMapper {
 
-    @Autowired
-    private TalConfigService talConfigService;
-
-    private final Map<UUID, TicketSystemConfig> ticketSystemConfigs = new ConcurrentHashMap<>();
-
     /**
      * Converts a TAL ticket into appropriate representation for a Ticket System
-     * and performing statuses/priorities/etc mapping.
-     * <br><br>
+     * and performs statuses/priorities/etc mapping.
+     *
      * Note that the {@link TalTicket} model is used for both TAL and third-party tickets just to simplify the sample,
      * when integrating with a real ticket system, the appropriate class for third-party tickets should be used.
      *
-     * @param talTicket TAL ticket to be mapped into third-party's one
+     * @param ticket ticket instance that needs to be mapped
+     * @param config adapter configuration
      * @return the mapped ticket
      */
-    public TalTicket mapFromSymphonyTicket(TalTicket talTicket)  {
-        UUID accountId = UUID.fromString(talTicket.getCustomerId());
-        String thirdPartyStatus = mapSymphonyStatus(talTicket.getStatus(), accountId);
-        talTicket.setStatus(thirdPartyStatus);
-        return talTicket;
+    public static TalTicket mapSymphonyToThirdParty(TalTicket ticket, TicketSystemConfig config)
+    {
+        mapTicketStatus(ticket, config);
+        mapTicketPriority(ticket, config);
+        mapRequestor(ticket, config);
+        mapAssignee(ticket, config);
+        mapCommentCreator(ticket, config);
+        mapAttachmentCreator(ticket, config);
+
+        return ticket;
     }
 
     /**
-     * Converts a third-party ticket into TAL ticket setting the Symphony specific fields
-     * and performing statuses/priorities/etc mapping.
-     * <br><br>
-     * Note that the {@link TalTicket} model is used for both TAL and third-party tickets just to simplify the sample,
-     * when integrating with a real ticket system, the appropriate class for third-party tickets should be used.
-     *
-     * @param thirdPartyTicket a third-party ticket to be mapped into Symphony's one
-     * @param accountId        the customer account identifier on Symphony
-     * @return the mapped ticket
+     * Maps ticket status from Symphony to 3rd party ticketing system
+     * @param ticket ticket instance that needs to be mapped
+     * @param config adapter configuration
      */
-    public TalTicket mapToSymphonyTicket(TalTicket thirdPartyTicket, UUID accountId) {
-        // set Symphony account id
-        thirdPartyTicket.setCustomerId(accountId.toString());
+    private static void mapTicketStatus(TalTicket ticket, TicketSystemConfig config) {
+        String thirdPartyStatus = config.getStatusMappingForThirdParty().get(ticket.getStatus());
 
-        // set an appropriate Symphony status
-        String status = thirdPartyTicket.getStatus();
-        String symphonyStatus = mapToSymphonyStatus(status, accountId);
-        thirdPartyTicket.setStatus(symphonyStatus);
+        if (thirdPartyStatus == null)
+            return;
 
-        return thirdPartyTicket;
+        ticket.setStatus(thirdPartyStatus);
     }
 
-    private TicketSystemConfig getTicketSystemConfig(UUID customerId) {
-        return ticketSystemConfigs.computeIfAbsent(customerId, id -> {
-            try {
-                return talConfigService.retrieveTicketSystemConfig(id);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
+    /**
+     * Maps ticket priority from Symphony to 3rd party ticketing system
+     * @param ticket ticket instance that needs to be mapped
+     * @param config adapter configuration
+     */
+    private static void mapTicketPriority(TalTicket ticket, TicketSystemConfig config) {
+        String thirdPartyPriority = config.getPriorityMappingForThirdParty().get(ticket.getPriority());
+
+        if (thirdPartyPriority == null)
+            return;
+
+        ticket.setPriority(thirdPartyPriority);
     }
 
-    private String mapToSymphonyStatus(String thirdPartyStatus, UUID accountId) {
-        // retrieve mappings for symphony to third-party statuses
-        Map<String, String> statusMapping = getTicketSystemConfig(accountId)
-                .getStatusMappingForSymphony();
-
-        return statusMapping.get(thirdPartyStatus);
+    /**
+     * Maps ticket requestor from Symphony to 3rd party ticketing system
+     * @param ticket ticket instance that needs to be mapped
+     * @param config adapter configuration
+     */
+    private static void mapRequestor(TalTicket ticket, TicketSystemConfig config) {
+        ticket.setRequester(mapUser(ticket.getRequester(), config));
     }
 
-    private String mapSymphonyStatus(String symphonyStatus, UUID accountId) {
-        // retrieve mappings for third-party to symphony statuses
-        Map<String, String> statusMapping = getTicketSystemConfig(accountId)
-                .getStatusMappingForThirdParty();
-
-        return statusMapping.get(symphonyStatus);
+    /**
+     * Maps ticket assignee from Symphony to 3rd party ticketing system
+     * @param ticket ticket instance that needs to be mapped
+     * @param config adapter configuration
+     */
+    private static void mapAssignee(TalTicket ticket, TicketSystemConfig config) {
+        ticket.setAssignedTo(mapUser(ticket.getAssignedTo(), config));
     }
 
+    /**
+     * Maps comment requestors from Symphony to 3rd party ticketing system
+     * @param ticket ticket instance that needs to be mapped
+     * @param config adapter configuration
+     */
+    private static void mapCommentCreator(TalTicket ticket, TicketSystemConfig config) {
+        Optional.ofNullable(ticket.getComments())
+                .orElse(Collections.emptySet())
+                .stream()
+                .forEach(c -> c.setCreator(mapUser(c.getCreator(), config)));
+    }
+
+    /**
+     * Maps attachment requestors from Symphony to 3rd party ticketing system
+     * @param ticket ticket instance that needs to be mapped
+     * @param config adapter configuration
+     */
+    private static void mapAttachmentCreator(TalTicket ticket, TicketSystemConfig config) {
+        Optional.ofNullable(ticket.getAttachments())
+                .orElse(Collections.emptySet())
+                .stream()
+                .forEach(c -> c.setCreator(mapUser(c.getCreator(), config)));
+    }
+
+    /**
+     * Maps user ID from Symphony to 3rd party ticketing system
+     * @param userId user identifier to map
+     * @param config adapter configuration
+     * @return mapped identifier eligible for 3rd party ticketing system
+     */
+    private static String mapUser(String userId, TicketSystemConfig config) {
+        if (userId == null)
+            return null;
+
+        String thirdPartyUserId = config.getUserMappingForThirdParty().get(userId).getThirdPartyId();
+
+        if (thirdPartyUserId == null)
+            return userId;
+
+        return thirdPartyUserId;
+    }
 }

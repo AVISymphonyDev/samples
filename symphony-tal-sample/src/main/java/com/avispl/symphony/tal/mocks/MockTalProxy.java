@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2019 AVI-SPL Inc. All Rights Reserved.
+ */
+
 package com.avispl.symphony.tal.mocks;
 
 import com.avispl.symphony.api.tal.TalAdapter;
@@ -13,6 +17,8 @@ import java.util.concurrent.ExecutionException;
 /**
  * Mock implementation of TalProxy
  * This mock could be used to simplify adapter testing without a need to set up Spring context and other parts of Symphony infrastructure
+ *
+ * @author Symphony Dev Team<br> Created on Jan 20, 2019
  */
 public class MockTalProxy implements TalProxy {
 
@@ -73,22 +79,10 @@ public class MockTalProxy implements TalProxy {
                     throw new IllegalArgumentException("Field attachment.size cannot be null or empty");
             }
         }
-
-        // no op
     }
 
     @Override
-    public void subscribeUpdates(String s, TalAdapter talAdapter) {
+    public void subscribeUpdates(UUID uuid, TalAdapter talAdapter) {
         // no op
-    }
-
-    @Override
-    public void subscribeUpdates(String s, TalAdapter talAdapter, UUID uuid) {
-        // no op
-    }
-
-    @Override
-    public boolean canHandleMessage(UUID uuid) throws ExecutionException {
-        return true;
     }
 }
