@@ -26,6 +26,8 @@ import static java.util.Collections.singletonList;
  * To utilize more advanced {@link RestCommunicator} library, see {@link RestCommunicatorDevice} sample. <br>
  * Note that while this sample only implements {@link Monitorable} interface, depending on device capabilities, there are other interfaces which can be
  * implemented: {@link Controller}, {@link CallController}, {@link MultipointControlUnit}.
+ *
+ * @author Symphony Dev Team<br> Created on May 8, 2019
  */
 public class HttpCommunicatorDevice extends HttpCommunicator implements Monitorable {
 

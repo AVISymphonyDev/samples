@@ -27,6 +27,8 @@ import static org.apache.sshd.common.util.io.IoUtils.closeQuietly;
  * It also implements {@link Pingable} and {@link SnmpQueryable} interfaces used by Symphony to collect appropriate device statistics. <br>
  * Note that while this sample only implements {@link Monitorable} interface, depending on device capabilities, there are other interfaces which can be
  * implemented: {@link Controller}, {@link CallController}, {@link MultipointControlUnit}.
+ *
+ * @author Symphony Dev Team<br> Created on May 8, 2019
  */
 public class TelnetCommunicatorDevice extends TelnetCommunicator implements Monitorable {
 

@@ -23,6 +23,8 @@ import static java.util.concurrent.CompletableFuture.runAsync;
 
 /**
  * Helper class
+ *
+ * @author Symphony Dev Team<br> Created on May 8, 2019
  */
 public class CommunicatorUtils {
 

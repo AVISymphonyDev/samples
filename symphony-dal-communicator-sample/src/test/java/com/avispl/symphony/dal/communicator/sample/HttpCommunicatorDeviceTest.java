@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2019 AVI-SPL, Inc. All Rights Reserved.
+ */
 package com.avispl.symphony.dal.communicator.sample;
 
 import com.avispl.symphony.api.dal.dto.monitor.EndpointStatistics;
