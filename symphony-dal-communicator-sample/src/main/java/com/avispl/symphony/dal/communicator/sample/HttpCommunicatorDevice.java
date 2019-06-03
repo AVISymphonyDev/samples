@@ -94,7 +94,8 @@ public class HttpCommunicatorDevice extends HttpCommunicator implements Monitora
     }
 
     /**
-     * Launches device sample.
+     * Launches device sample. <br>
+     * Note this method is only here to demonstrate how sample works and does not need to be implemented in real device libraries.
      *
      * @param args no arguments is supported for now
      * @throws Exception if any error occurs

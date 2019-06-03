@@ -69,8 +69,8 @@ public class SshCommunicatorDevice extends SshCommunicator implements Monitorabl
     @Override
     public List<Statistics> getMultipleStatistics() throws Exception {
         //send command via ssh and parse response to get statistics
-        String commandResult = send("ver");
-        int bitRateRx = Integer.valueOf(commandResult.replaceAll("[^\\d]", "").substring(0, 4));
+        String commandResult = send("hostname");
+        int bitRateRx = commandResult.length();
 
         //Collect endpoint statistics
         EndpointStatistics statistics = new EndpointStatistics();
