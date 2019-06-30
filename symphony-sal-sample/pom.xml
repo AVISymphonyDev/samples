@@ -38,14 +38,14 @@
             <artifactId>symphony-api-commons</artifactId>
             <scope>system</scope>
             <version>${symphony-sal.version}</version>
-            <systemPath>${basedir}\src\lib\symphony-api-commons-${symphony-sal.version}.jar</systemPath>
+            <systemPath>${basedir}\lib\symphony-api-commons-${symphony-sal.version}.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>com.avispl.symphony.api</groupId>
             <artifactId>symphony-api-sal</artifactId>
             <scope>system</scope>
             <version>${symphony-sal.version}</version>
-            <systemPath>${basedir}\src\lib\symphony-api-sal-${symphony-sal.version}.jar</systemPath>
+            <systemPath>${basedir}\lib\symphony-api-sal-${symphony-sal.version}.jar</systemPath>
         </dependency>
     </dependencies>
 </project>
