@@ -42,7 +42,11 @@
             <version>${symphony-tal.version}</version>
             <systemPath>${basedir}\lib\symphony-api-tal-${symphony-tal.version}.jar</systemPath>
         </dependency>
-
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-web</artifactId>
+			<version>4.3.12.RELEASE</version>
+		</dependency>
     </dependencies>
 
 </project>
