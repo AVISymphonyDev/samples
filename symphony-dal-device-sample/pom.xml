@@ -26,7 +26,7 @@
 			<artifactId>symphony-api-dal</artifactId>
 			<version>4.7.0</version>
 			<scope>system</scope>
-			<systemPath>${basedir}/lib/symphony-api-dal-4.7.0-SNAPSHOT.jar</systemPath>
+			<systemPath>${basedir}/lib/symphony-api-dal-4.7.0.jar</systemPath>
         </dependency>
     </dependencies>
 </project>
