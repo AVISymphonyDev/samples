@@ -3,17 +3,23 @@ This project is a DAL simulator. Main goal of this project is to provide 3rd par
 
 Running DAL simulator
 ---------------------
-
 In order to run DAL simulator, following prerequisites needs to be met:
 - JRE 1.8.x installed (`JRE_HOME/bin` must be on a PATH)
 
-In order to run simulator, run following command
+In order to run simulator, run following command:
 ```
 java -jar -DdevicesXmlPath=e:/dal-simulator-test/ symphony-dal-simulator.jar
 ```
 
 Note to set `-DdevicesXmlPath` to a directory where `devices.xml` is located. 
 During the startup DAL simulator will check for a devices.xml in the current folder which must exist in order to make simulator function properly.
+
+If your device class uses third party libraries, please add needed jars in `lib` folder end use following command:
+```
+java -cp symphony-dal-simulator.jar -Dloader.path="./lib/*" -DdevicesXmlPath=e:/dal-simulator-test/ org.springframework.boot.loader.PropertiesLauncher
+```
+
+In our examples `SshCommunicatorDevice` uses sshd third party library, so it is necessarily to add `sshd-common` and `sshd-core` jars in lib folder.
 
 After successful startup, Swagger becomes available by this URL: http://localhost:8080/swagger-ui.html
 
