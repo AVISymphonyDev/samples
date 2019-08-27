@@ -71,8 +71,7 @@ public class CommunicatorUtils {
         try (Socket socket = serverSocket.accept()) {
             PrintStream out = new PrintStream(socket.getOutputStream());
             out.println("Welcome!");
-            try {
-                Scanner scanner = new Scanner(socket.getInputStream());
+            try (Scanner scanner = new Scanner(socket.getInputStream())){
                 while (scanner.hasNext()) {
                     final Process exec = Runtime.getRuntime().exec(scanner.nextLine().split(" "));
                     exec.waitFor();

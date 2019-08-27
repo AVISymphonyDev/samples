@@ -69,13 +69,17 @@ public class TelnetCommunicatorDevice extends TelnetCommunicator implements Moni
 
 	// note: embedded telnet server is only used as a simulator for this sample and is not part of what this sample illustrates
 	private Closeable telnet;
+	//port of test server
+    private int serverPort = 5334;
 
 	/**
 	 * TelnetCommunicatorDevice constructor.
 	 */
 	public TelnetCommunicatorDevice() {
 		super();
-
+		
+		this.setHost("localhost");
+		this.setPort(serverPort);
 		// telnet server simulator used by this sample does not require login
 		this.setLogin(null);
 		this.setPassword(null);
@@ -97,7 +101,7 @@ public class TelnetCommunicatorDevice extends TelnetCommunicator implements Moni
 	protected void internalInit() throws Exception {
 		// create telnet server listening on local port 5334
 		// note: embedded telnet server is only used as a simulator for this sample and is not part of what this sample illustrates
-		telnet = com.avispl.symphony.dal.communicator.sample.util.CommunicatorUtils.startTelnetServer(5334);
+		telnet = com.avispl.symphony.dal.communicator.sample.util.CommunicatorUtils.startTelnetServer(serverPort);
 
 		// if needed, code to perform any extra initialization can be put here
 		// also this method can be used to validate that device object is fully configured before use

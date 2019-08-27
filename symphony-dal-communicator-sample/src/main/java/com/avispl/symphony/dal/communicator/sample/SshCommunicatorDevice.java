@@ -33,11 +33,29 @@ import static org.apache.sshd.common.util.io.IoUtils.closeQuietly;
 public class SshCommunicatorDevice extends SshCommunicator implements Monitorable {
 
     private static Closeable ssh;
+    //port of test server
+    private int serverPort = 5333;
+    
+    public SshCommunicatorDevice() {
+    	
+    	this.setHost("localhost");
+    	this.setPort(serverPort);
+        //Set list of error response strings
+        this.setCommandSuccessList(singletonList(""));
+        //Set list of error response strings
+        this.setCommandErrorList(singletonList("ERROR\r\n"));
+        //Set list of success login strings
+        this.setLoginSuccessList(singletonList(""));
+        //login and password to test ssh server
+        this.setLogin("test");
+		this.setPassword("test");
+
+    }
 
     @Override
     protected void internalInit() throws Exception {
         //create ssh service for test device on local port 5333
-        ssh = startSshServer(5333);
+        ssh = startSshServer(serverPort);
 
         // if needed, code to perform any extra initialization can be put here
 

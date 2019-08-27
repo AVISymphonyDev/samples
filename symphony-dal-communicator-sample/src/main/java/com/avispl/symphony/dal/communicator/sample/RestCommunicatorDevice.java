@@ -75,7 +75,7 @@ public class RestCommunicatorDevice extends RestCommunicator implements Monitora
     @Override
     public List<Statistics> getMultipleStatistics() throws Exception {
         //call rest method and convert response to java objects
-        Map data = doGet("utc/now", Map.class);
+        Map<?,?> data = doGet("utc/now", Map.class);
         int bitRateRx = abs(((Long) data.get("currentFileTime")).intValue());
 
         // compose corresponding statistics object
