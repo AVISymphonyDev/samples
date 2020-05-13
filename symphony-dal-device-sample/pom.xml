@@ -24,9 +24,9 @@
         <dependency>
 			<groupId>com.avispl.symphony.api</groupId>
 			<artifactId>symphony-api-dal</artifactId>
-			<version>4.7.0</version>
+			<version>4.9.1</version>
 			<scope>system</scope>
-			<systemPath>${basedir}/lib/symphony-api-dal-4.8.0.jar</systemPath>
+			<systemPath>${basedir}/lib/symphony-api-dal-4.9.1.jar</systemPath>
         </dependency>
     </dependencies>
 </project>
