@@ -1,0 +1,33 @@
+models:
+  - model:
+      name: generic
+      node: Devices
+      vendor: test
+      properties:
+        FirmwareVersion: FirmwareVersion
+        isControlled: IsControlled
+        isProtected: IsProtected
+      mapping:
+        deviceModel: ModelDescription
+        deviceOnline: Status
+        serialNumber: SerialNumber
+  - model:
+      name: TestDevice
+      vendor: biamp
+      filter: device.Model=='TestDevice'
+      properties:
+        Reboot: Reboot
+        FirmwareVersion: device.FirmwareVersion
+        isProtected: device.IsProtected
+      mapping:
+        deviceMake: Test
+        deviceName: TestDevice
+        deviceModel: device.ModelDescription
+        deviceOnline: device.Status==0
+        serialNumber: device.SerialNumber
+      control:
+        Reboot:
+          type: Button
+          label: Reboot
+          labelPressed: Rebooting
+          gracePeriod: 0

@@ -1,0 +1,60 @@
+models:
+  - model:
+      name: generic
+      node: Devices
+      vendor: test
+      properties:
+        FirmwareVersion: FirmwareVersion
+        isControlled: IsControlled
+        isProtected: IsProtected
+      mapping:
+        deviceModel: ModelDescription
+        deviceOnline: Status
+        serialNumber: SerialNumber
+  - model:
+      name: TestDevice
+      vendor: biamp
+      filter: device.Model=='TestDevice'
+      properties:
+        Reboot: Reboot
+        Switch: "true"
+        Preset: Option1
+        DropDown: Option1
+        Slider: "1.5"
+        FirmwareVersion: device.FirmwareVersion
+        isProtected: device.IsProtected
+      mapping:
+        deviceMake: Test
+        deviceName: TestDevice
+        deviceModel: device.ModelDescription
+        deviceOnline: device.Status==0
+        serialNumber: device.SerialNumber
+      control:
+        Button:
+          type: Button
+          label: Reboot
+          labelPressed: Rebooting
+          gracePeriod: 0
+        Switch:
+          type: Switch
+          labelOn: "On"
+          labelOff: "Off"
+          value: true
+        Preset:
+          type: Preset
+          labels: "Label1, Label2, Label3, Label4"
+          options: "Option1, Option2, Option3, Option4"
+          value: "Option1"
+        DropDown:
+          type: DropDown
+          labels: "Label1, Label2, Label3, Label4"
+          options: "Option1, Option2, Option3, Option4"
+          value: "Option1"
+        Slider:
+          type: Slider
+          rangeStart: 1.0
+          rangeEnd: 2.0
+          labelStart: "Start"
+          labelEnd: "End"
+          value: 1.5
+

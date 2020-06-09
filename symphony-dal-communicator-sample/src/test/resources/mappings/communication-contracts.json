@@ -1,0 +1,58 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "/test/api/login",
+        "bodyPatterns": [
+          {
+            "equalToJson": "{\"credentials\":{\"userName\": \"Admin\", \"password\": \"1234\"}}"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"LoginId\":\"ea7a6606-30b6-4b39-afb4-d6f171a650db\",\"Role\":\"Administrator\"}",
+        "headers": {
+          "Content-Type": "text/plain"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/test/api/devices",
+        "headers": {
+          "SessionID": {
+            "equalTo": "ea7a6606-30b6-4b39-afb4-d6f171a650db"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"Devices\":[{\"Model\":\"TestDevice\",\"ModelDescription\":\"TEST01\",\"FirmwareVersion\":\"3.3.0.18\",\"IsControlled\":false,\"SerialNumber\":\"03275657\",\"IsProtected\":false,\"Status\":0}]}",
+        "headers": {
+          "Content-Type": "text/plain"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/test/api/devices/03275657",
+        "headers": {
+          "SessionID": {
+            "equalTo": "ea7a6606-30b6-4b39-afb4-d6f171a650db"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": "{\"Model\":\"TestDevice\",\"ModelDescription\":\"TEST01\",\"FirmwareVersion\":\"3.3.0.18\",\"IsControlled\":false,\"SerialNumber\":\"03275657\",\"IsProtected\":false,\"Status\":0}",
+        "headers": {
+          "Content-Type": "text/plain"
+        }
+      }
+    }
+  ]
+}
