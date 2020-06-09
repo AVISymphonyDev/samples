@@ -117,6 +117,56 @@ public class AggregatorControlsCommunicator extends RestCommunicator implements 
         return authenticationBody;
     }
 
+    /**
+     * aggregatedDeviceProcessor.extractDevices(JsonNode) generates a list of AggregatedDevice instances based on
+     * the yml mapping defined like following
+     *         Map<String, PropertiesMapping> mapping = new PropertiesMappingParser().loadYML("aggregator/model-mapping-controls.yml", getClass());
+     * The AggregateDeviceProcessor is then initialized using this mapping
+     *          aggregatedDeviceProcessor = new AggregatedDeviceProcessor(mapping);
+     *
+     * Basic mapping features:
+     * Properties:
+     *  Contains any custom data as well as placeholders for controls to be shown on UI
+     * Mapping:
+     *  Contains native aggregated device properties (serialNumber, deviceModel etc., check AggregatedDevice source code to see more)
+     * Control:
+     *  Is used to create controls for the device adapters. There are 2 ways to define a control - legacy and relevant one, legacy
+     *  implies using AggregatedDevice.setControl(Map<String, String>), not supported by the aggregatedDeviceProcessor.
+     *  Relevant version mapping implies control information definition like so:
+     *         Button:                                              // Control name
+     *           type: Button                                       // Control type
+     *           label: Reboot                                      // Label
+     *           labelPressed: Rebooting                            // Label after pressed
+     *           gracePeriod: 0                                     // Device statistics pause period
+     *
+     *         Switch:                                              // Control name
+     *           type: Switch                                       // Control type
+     *           labelOn: "On"                                      // Label "on"
+     *           labelOff: "Off"                                    // Label "off"
+     *           value: true                                        // Current value
+     *
+     *         Preset:                                              // Control name
+     *           type: Preset                                       // Control type
+     *           labels: "Label1, Label2, Label3, Label4"           // List of options labels
+     *           options: "Option1, Option2, Option3, Option4"      // List of options values
+     *           value: "Option1"                                   // Current value
+     *
+     *         DropDown:                                            // Control name
+     *           type: DropDown                                     // Control type
+     *           labels: "Label1, Label2, Label3, Label4"           // List of options labels
+     *           options: "Option1, Option2, Option3, Option4"      // List of options values
+     *           value: "Option1"                                   // Current value
+     *
+     *         Slider:                                              // Control name
+     *           type: Slider                                       // Control type
+     *           rangeStart: 1.0                                    // Range start
+     *           rangeEnd: 2.0                                      // Range end
+     *           labelStart: "Start"                                // Starting label
+     *           labelEnd: "End"                                    // Ending label
+     *           value: 1.5                                         // Current value
+     *
+     *
+     * */
     private List<AggregatedDevice> fetchDevicesList() throws Exception {
         List<AggregatedDevice> devices = aggregatedDeviceProcessor.extractDevices(getDevices());
         return devices;
